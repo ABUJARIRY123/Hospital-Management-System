@@ -5,37 +5,16 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  sourceInfo?: string;
 }
 
 const ChatBotUI = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [availablePdfs, setAvailablePdfs] = useState<string[]>([]);
-  const [selectedPdf, setSelectedPdf] = useState<string>('');
   const [prompt, setPrompt] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Fetch available PDFs when component mounts
-  useEffect(() => {
-    const fetchPdfs = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/get-pdfs');
-        const data = await response.json();
-        if (data.pdfs) {
-          setAvailablePdfs(data.pdfs);
-          if (data.pdfs.length > 0) {
-            setSelectedPdf(data.pdfs[0]); // Select first PDF by default
-          }
-        }
-      } catch (err) {
-        setError('Failed to fetch available PDFs');
-      }
-    };
-
-    fetchPdfs();
-  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,7 +29,7 @@ const ChatBotUI = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim() || !selectedPdf) return;
+    if (!prompt.trim()) return;
 
     setIsLoading(true);
     setError(null);
@@ -63,7 +42,6 @@ const ChatBotUI = () => {
         },
         body: JSON.stringify({
           prompt: prompt,
-          pdf_name: selectedPdf,
         }),
       });
 
@@ -77,12 +55,13 @@ const ChatBotUI = () => {
         ...prev,
         { 
           role: 'user', 
-          content: `[${selectedPdf}] ${prompt}`,
+          content: prompt,
           timestamp: new Date()
         },
         { 
           role: 'assistant', 
           content: data.response,
+          sourceInfo: data.source_info,
           timestamp: new Date()
         },
       ]);
@@ -105,7 +84,7 @@ const ChatBotUI = () => {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Chat messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-6">
           {messages.map((message, index) => (
             <div
               key={index}
@@ -119,6 +98,11 @@ const ChatBotUI = () => {
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                {message.sourceInfo && (
+                  <p className="mt-2 text-sm opacity-75 border-t border-gray-700 pt-2">
+                    {message.sourceInfo}
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -135,22 +119,6 @@ const ChatBotUI = () => {
             </div>
           )}
 
-          {/* PDF Selection Dropdown */}
-          <div className="mb-4">
-            <select
-              value={selectedPdf}
-              onChange={(e) => setSelectedPdf(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isLoading}
-            >
-              {availablePdfs.map((pdf) => (
-                <option key={pdf} value={pdf}>
-                  {pdf}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <form onSubmit={handleSubmit} className="flex items-end gap-2">
             <div className="flex-1 relative">
               <textarea
@@ -158,15 +126,15 @@ const ChatBotUI = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a question about the selected PDF..."
+                placeholder="Ask a question about any of the available documents..."
                 className="w-full resize-none rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent p-3 pr-20 min-h-[52px] max-h-[200px] disabled:bg-gray-50"
-                disabled={isLoading || availablePdfs.length === 0}
+                disabled={isLoading}
                 rows={1}
               />
             </div>
             <button
               type="submit"
-              disabled={isLoading || !prompt.trim() || !selectedPdf}
+              disabled={isLoading || !prompt.trim()}
               className="p-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-w-[52px]"
             >
               {isLoading ? (
