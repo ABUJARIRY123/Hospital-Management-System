@@ -126,7 +126,7 @@ const ChatBotUI = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a question about any of the available documents..."
+                placeholder="My name is Steadfast bot, ask me a questiom and I will be glad to answer..."
                 className="w-full resize-none rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent p-3 pr-20 min-h-[52px] max-h-[200px] disabled:bg-gray-50"
                 disabled={isLoading}
                 rows={1}
